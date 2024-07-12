@@ -24,10 +24,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # GitHub Packages とコンテンツへのアクセス権限を設定
+    # GitHub Container Registry へのアクセス権を設定
     permissions:
-      contents: read
-      packages: write
+      contents: write # リポジトリのコードを読み取る、コミットにコメントを書き込む
+      packages: write # GitHub Container Registry にイメージをプッシュする
+      pull-requests: write # プルリクエストにコメントを書き込む
 
     steps:
       # リポジトリのコードをチェックアウト
@@ -67,7 +68,7 @@ jobs:
             # メインブランチの最新コミットのビルドを'edge'タグとして使用
             type=edge
             # ビルド日時をタグとして使用（例：20240712-123456）
-            type=raw,value={{date 'YYYYMMDD-HHmmss' tz='Asia/Tokyo'}}
+            type=raw,value=on-{{date 'YYYYMMDD-HHmmss' tz='Asia/Tokyo'}}
 
       # Dockerイメージをビルドしてプッシュ
       - uses: docker/build-push-action@v6
@@ -85,3 +86,43 @@ jobs:
           cache-to: type=gha,mode=max
           # マルチプラットフォーム向けにビルド
           platforms: linux/amd64,linux/arm64
+
+      # コメント内容を生成
+      - name: Generate comment content
+        id: comment
+        run: |
+          COMMENT_BODY="**🐳 Docker images built and pushed to GitHub Container Registry**
+
+          <details>
+          <summary>🏷️ View image tags and details</summary>
+
+          **Available Image Tags**
+          \`\`\`
+          ${{ steps.meta.outputs.tags }}
+          \`\`\`
+
+          **Tag Explanations**
+          - \`pr-X\`: Tag for this pull request
+          - \`on-YYYYMMDD-HHMMSS\`: Build timestamp
+          - \`sha-XXXXXXX\`: Short commit SHA
+          - \`sha-XXXXXXX...\`: Full commit SHA
+
+          **Tips**
+          To use these images, pull your desired tag using the \`docker pull\` command with the full image path from the list above.
+
+          </details>"
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMENT_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # コミットにコメントを追加
+      - uses: peter-evans/commit-comment@v3
+        with:
+          body: ${{ steps.comment.outputs.body }}
+
+      # プルリクエスト時にコメントを追加
+      - uses: thollander/actions-comment-pull-request@v2
+        if: github.event_name == 'pull_request'
+        with:
+          comment_tag: image_tags
+          message: ${{ steps.comment.outputs.body }}
