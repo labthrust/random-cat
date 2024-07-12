@@ -45,6 +45,8 @@ jobs:
             type=sha,format=long
             type=raw,value={{date 'YYYYMMDD-HHmmss' tz='Asia/Tokyo'}}
 
+      - run: echo '${{ toJson(steps.meta.outputs) }}' | jq .
+
       - uses: docker/build-push-action@v6
         with:
           push: true
