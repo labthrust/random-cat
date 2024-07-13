@@ -1,3 +1,9 @@
-/.idea
-/node_modules
-/.github
+*
+!/package.json
+!/yarn.lock
+!/.yarnrc.yml
+!/.yarn/releases/**
+!/.yarn/install-state.gz
+!/pages
+!/next.config.js
+!/tsconfig.json
