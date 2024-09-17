@@ -17,8 +17,8 @@ env:
   # 環境変数ENVIRONMENTを設定
   # 条件:
   # 1. イベントタイプが'push'である
-  # 2. タグが'v'で始まる（refs/tags/vで始まるref）、またはmainブランチへのプッシュ
-  # 3. タグの場合は、そのタグがmainブランチに対して作成されたこと
+  # 2. タグが'v'で始まる（refs/tags/vで始まるref）
+  # 3. タグがmainブランチに対して作成された（github.event.base_refがrefs/heads/mainと等しい）
   # これらの条件をすべて満たす場合は'production'、それ以外は'preview'
   ENVIRONMENT: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.event.base_ref == 'refs/heads/main' && 'production' || 'preview' }}
   # デフォルトでDEPLOYをtrueに設定
@@ -35,16 +35,6 @@ jobs:
       pull-requests: write # プルリクエストにコメントを書き込む
 
     steps:
-      # デバッグ情報を出力するステップを追加
-      - name: Debug ENVIRONMENT variable
-        run: |
-          echo "github.event_name: ${{ github.event_name }}"
-          echo "github.ref: ${{ github.ref }}"
-          echo "startsWith(github.ref, 'refs/tags/v'): ${{ startsWith(github.ref, 'refs/tags/v') }}"
-          echo "github.event.base_ref: ${{ github.event.base_ref }}"
-          echo "github.ref == 'refs/heads/main': ${{ github.ref == 'refs/heads/main' }}"
-          echo "Resulting ENVIRONMENT: ${{ env.ENVIRONMENT }}"
-
       # タグがmainブランチに対するものかを確認し、もしそうでない場合はワークフローをスキップするようにDEPLOYをfalseにするステップ
       - name: Check if tag is on main branch
         if: startsWith(github.ref, 'refs/tags/')
