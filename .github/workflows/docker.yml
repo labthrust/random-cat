@@ -21,8 +21,6 @@ env:
   # 3. タグがmainブランチに対して作成された（github.event.base_refがrefs/heads/mainと等しい）
   # これらの条件をすべて満たす場合は'production'、それ以外は'preview'
   ENVIRONMENT: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.event.base_ref == 'refs/heads/main' && 'production' || 'preview' }}
-  # デフォルトでDEPLOYをtrueに設定
-  DEPLOY: true
 
 jobs:
   build:
@@ -35,28 +33,18 @@ jobs:
       pull-requests: write # プルリクエストにコメントを書き込む
 
     steps:
-      # タグがmainブランチに対するものかを確認し、もしそうでない場合はワークフローをスキップするようにDEPLOYをfalseにするステップ
-      - name: Check if tag is on main branch
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          if [[ "${{ github.event.base_ref }}" != "refs/heads/main" ]]; then
-            echo "This tag is not on the main branch. Subsequent steps will be skipped."
-            echo "DEPLOY=false" >> $GITHUB_ENV
-          fi
+      # TODO: タグがmainブランチに対するものかを確認し、もしそうでない場合はbuildやpushのステップをスキップするようする
 
       # リポジトリのコードをチェックアウト
       - name: Checkout repository
-        if: env.DEPLOY == 'true'
         uses: actions/checkout@v4
 
       # Docker Buildxをセットアップ
       - name: Setup Docker Buildx
-        if: env.DEPLOY == 'true'
         uses: docker/setup-buildx-action@v3
 
       # コンテナーレジストリーにログイン
       - name: Login to Container Registry
-        if: env.DEPLOY == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -65,7 +53,6 @@ jobs:
 
       # Dockerイメージのメタデータを抽出
       - name: Extract Docker metadata
-        if: env.DEPLOY == 'true'
         uses: docker/metadata-action@v5
         # 後続のステップで使用するためにIDを設定
         id: meta
@@ -84,7 +71,6 @@ jobs:
 
       # Dockerイメージをビルドしてプッシュ
       - name: Build and push Docker images
-        if: env.DEPLOY == 'true'
         uses: docker/build-push-action@v6
         with:
           # イメージをレジストリにプッシュ（true に設定）
@@ -101,7 +87,6 @@ jobs:
 
       # コメント内容を生成
       - name: Generate comment content
-        if: env.DEPLOY == 'true'
         id: comment
         run: |
           COMMENT_BODY="**🐳 Docker images built and pushed to GitHub Container Registry**
@@ -130,14 +115,13 @@ jobs:
 
       # コミットにコメントを追加
       - name: Add comment to commit
-        if: env.DEPLOY == 'true'
         uses: peter-evans/commit-comment@v3
         with:
           body: ${{ steps.comment.outputs.body }}
 
       # プルリクエスト時にコメントを追加
       - name: Add comment to pull request (if applicable)
-        if: env.DEPLOY == 'true' && github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@v2
         with:
           comment_tag: image_tags
