@@ -18,9 +18,8 @@ env:
   # 条件:
   # 1. イベントタイプが'push'である
   # 2. タグが'v'で始まる（refs/tags/vで始まるref）
-  # 3. タグがmainブランチに対して作成された（github.event.base_refがrefs/heads/mainと等しい）
   # これらの条件をすべて満たす場合は'production'、それ以外は'preview'
-  ENVIRONMENT: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.event.base_ref == 'refs/heads/main' && 'production' || 'preview' }}
+  ENVIRONMENT: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && 'production' || 'preview' }}
 
 jobs:
   build:
